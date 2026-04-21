@@ -16,6 +16,8 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 LOG_FILE = "keep_alive.log"
 
+ENABLE_FILE_LOGGING = os.environ.get("ENABLE_FILE_LOGGING", "true").lower() == "true"
+
 def send_telegram_alert(message):
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return
@@ -32,21 +34,22 @@ def log(status, url):
     
     print(line)
     
-    # Write to log and keep only last 50 lines to prevent bloat
-    try:
-        if os.path.exists(LOG_FILE):
-            with open(LOG_FILE, "r") as f:
-                lines = f.readlines()
-        else:
-            lines = []
+    if ENABLE_FILE_LOGGING:
+        # Write to log and keep only last 50 lines to prevent bloat
+        try:
+            if os.path.exists(LOG_FILE):
+                with open(LOG_FILE, "r") as f:
+                    lines = f.readlines()
+            else:
+                lines = []
+                
+            lines.append(line + "\n")
+            lines = lines[-50:] # Keep only last 50 lines
             
-        lines.append(line + "\n")
-        lines = lines[-50:] # Keep only last 50 lines
-        
-        with open(LOG_FILE, "w") as f:
-            f.writelines(lines)
-    except Exception as e:
-        print(f"Log error: {e}")
+            with open(LOG_FILE, "w") as f:
+                f.writelines(lines)
+        except Exception as e:
+            print(f"Log error: {e}")
 
 def create_driver():
     options = Options()
