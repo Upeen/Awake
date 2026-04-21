@@ -30,12 +30,23 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run keep-alive script
+        env:
+          TARGET_URLS: ${{ vars.TARGET_URLS }} # Set this in GitHub Repository Variables to avoid hardcoding
         run: python keep_alive.py
+
+      - name: Upload Error Screenshots (if any)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: error-screenshots
+          path: error_*.png
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: Commit log file
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "actions@github.com"
           git add keep_alive.log
-          git commit -m "update keep-alive log" || echo "no changes"
+          git commit -m "update keep-alive log (max 50 lines)" || echo "no changes"
           git push
