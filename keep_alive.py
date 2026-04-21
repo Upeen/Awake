@@ -58,6 +58,11 @@ def create_driver():
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
+    
+    # Suppress verbose Chrome logs and DevTools messages
+    options.add_argument("--log-level=3") 
+    options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    
     return webdriver.Chrome(options=options)
 
 def is_sleeping(page_source):
