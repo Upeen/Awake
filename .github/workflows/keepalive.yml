@@ -2,9 +2,7 @@ name: Keep Streamlit Apps Alive
 
 on:
   schedule:
-    # Primary schedule (every 20 min)
     - cron: "*/20 * * * *"
-    # Backup schedule (offset by 10 mins)
     - cron: "10-59/20 * * * *"
   workflow_dispatch:
 
@@ -14,32 +12,40 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Ping Streamlit apps multiple times
+      - name: Ping Streamlit apps with names + logging
         env:
-          TARGET_URLS: "https://youtube-kh6rosxefwmjzgadaq7i9q.streamlit.app/,https://contenthindinews-ncirgqofw4tgg8vveurmty.streamlit.app/,https://contentenglish-4lqyek9fghp4imenjzbypu.streamlit.app/"
+          TARGET_URLS: "YouTube|https://youtube-kh6rosxefwmjzgadaq7i9q.streamlit.app/,ZeeHindi|https://contenthindinews-ncirgqofw4tgg8vveurmty.streamlit.app/,English|https://contentenglish-4lqyek9fghp4imenjzbypu.streamlit.app/"
         run: |
           echo "Starting keep-alive pings..."
 
-          # Split URLs into array
+          LOG_FILE="keep_alive.log"
+          touch $LOG_FILE
+
           IFS=',' read -ra URLS <<< "$TARGET_URLS"
 
-          for url in "${URLS[@]}"
+          for entry in "${URLS[@]}"
           do
-            # Trim spaces (safety)
-            url=$(echo "$url" | xargs)
+            entry=$(echo "$entry" | xargs)
 
-            echo "🔗 Pinging $url"
+            # Split NAME and URL
+            NAME=$(echo "$entry" | cut -d'|' -f1)
+            URL=$(echo "$entry" | cut -d'|' -f2)
 
-            # Try 3 times
+            echo "🔗 Pinging [$NAME] -> $URL"
+
             for i in {1..3}
             do
-              echo "Attempt $i..."
+              TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-              if curl -s --max-time 30 "$url" > /dev/null; then
-                echo "✅ Success"
+              if curl -s --max-time 30 "$URL" > /dev/null; then
+                STATUS="SUCCESS"
+                echo "✅ $NAME Success"
+                echo "$TIMESTAMP | $NAME | $URL | $STATUS" >> $LOG_FILE
                 break
               else
-                echo "⚠️ Retry in 60s..."
+                STATUS="FAILED"
+                echo "⚠️ $NAME Retry in 60s..."
+                echo "$TIMESTAMP | $NAME | $URL | $STATUS" >> $LOG_FILE
                 sleep 60
               fi
             done
@@ -48,3 +54,9 @@ jobs:
           done
 
           echo "✅ All pings completed."
+
+      - name: Upload log file
+        uses: actions/upload-artifact@v4
+        with:
+          name: keep-alive-logs
+          path: keep_alive.log
